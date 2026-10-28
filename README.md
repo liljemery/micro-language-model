@@ -53,22 +53,35 @@ Usa el intérprete dentro de `.venv` para que `pip` instale PyTorch en ese entor
 
 Las respuestas de recetas están en inglés, porque el dataset está en inglés. El prototipo reconoce algunos nombres de ingredientes, plurales y alias en español. Si pides sopa, indica que el dataset no contiene recetas de sopa; si no encuentra un ingrediente conocido, te pide uno.
 
-## Cómo funciona / How it works
+## Arquitectura / Architecture
 
 ```mermaid
 flowchart TD
-    A["Entrenar<br/>CSV + preguntas"] --> B["Micro Language Model causal<br/>Atención Q/K por coseno"]
-    B --> C["Guardar checkpoint<br/>micro_language_model.pt"]
-    D["Pregunta"] --> E["Normalizar términos<br/>Buscar receta por coseno"]
-    E --> F{"¿Pide sopa o<br/>no hay coincidencia?"}
-    F -- Sí --> G["Avisar que no hay receta de sopa<br/>o pedir un ingrediente"]
-    F -- No --> H["Generar respuesta<br/>con la receta recuperada"]
-    H --> I{"¿Coincide con<br/>la receta recuperada?"}
-    I -- Sí --> J["Devolver respuesta generada"]
-    I -- No --> K["Devolver receta<br/>exacta del CSV"]
+    subgraph entry["Entrada"]
+        A["Lanzador<br/>micro_language_model.py"] --> B["CLI<br/>cli.py"]
+    end
+
+    subgraph workflows["Flujos principales"]
+        B --> C["Entrenamiento<br/>training.py"]
+        B --> D["Consulta<br/>inference.py"]
+    end
+
+    subgraph components["Componentes reutilizables"]
+        C --> E["CSV y ejemplos<br/>dataset.py"]
+        C --> F["Transformer<br/>model.py"]
+        C --> G["Búsqueda por coseno<br/>retrieval.py"]
+        C --> H["Tokens y alias<br/>text.py"]
+        C --> I["Configuración<br/>config.py"]
+        D --> F
+        D --> G
+        D --> H
+        E --> H
+        G --> H
+        F --> I
+    end
 ```
 
-Micro Language Model usa un Transformer causal autoregresivo, no una llamada a una API. Como la generación puede cambiar detalles, el CLI solo la acepta si su secuencia de palabras coincide con la receta recuperada; en otro caso devuelve la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver los detalles y límites.
+El lanzador conserva los comandos existentes y delega en la CLI. Al consultar, `inference.py` recupera una receta por coseno y condiciona el Transformer causal; solo acepta el texto generado si coincide con la receta recuperada, y si no devuelve la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver detalles y límites.
 
 ## Estructura del repositorio / Repository layout
 
