@@ -57,28 +57,28 @@ Las respuestas de recetas están en inglés, porque el dataset está en inglés.
 
 ```mermaid
 flowchart TD
-    subgraph entry["Entrada"]
-        A["Lanzador<br/>micro_language_model.py"] --> B["CLI<br/>cli.py"]
-    end
+    cli["CLI<br/>micro_language_model.py<br/>micro_lm/cli.py"]
+    training["Entrenamiento<br/>training.py"]
+    inference["Consulta<br/>inference.py"]
+    dataset["CSV y ejemplos<br/>dataset.py"]
+    retrieval["TF-IDF y coseno<br/>retrieval.py"]
+    model["Transformer<br/>model.py"]
+    text["Tokens y alias<br/>text.py"]
+    config["Configuración<br/>config.py"]
 
-    subgraph workflows["Flujos principales"]
-        B --> C["Entrenamiento<br/>training.py"]
-        B --> D["Consulta<br/>inference.py"]
-    end
-
-    subgraph components["Componentes reutilizables"]
-        C --> E["CSV y ejemplos<br/>dataset.py"]
-        C --> F["Transformer<br/>model.py"]
-        C --> G["Búsqueda por coseno<br/>retrieval.py"]
-        C --> H["Tokens y alias<br/>text.py"]
-        C --> I["Configuración<br/>config.py"]
-        D --> F
-        D --> G
-        D --> H
-        E --> H
-        G --> H
-        F --> I
-    end
+    cli --> training
+    cli --> inference
+    training --> dataset
+    training --> retrieval
+    training --> model
+    training --> text
+    training --> config
+    inference --> retrieval
+    inference --> model
+    inference --> text
+    dataset --> text
+    retrieval --> text
+    model --> config
 ```
 
 El lanzador conserva los comandos existentes y delega en la CLI. Al consultar, `inference.py` recupera una receta por coseno y condiciona el Transformer causal; solo acepta el texto generado si coincide con la receta recuperada, y si no devuelve la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver detalles y límites.
