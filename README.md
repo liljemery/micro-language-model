@@ -75,20 +75,32 @@ Micro Language Model usa un Transformer causal autoregresivo, no una llamada a u
 ```text
 micro-language-model/
 ├── data/generated_recipe_dataset.csv  # Datos usados para entrenar y recuperar
+├── micro_lm/
+│   ├── __init__.py                    # Paquete del modelo
+│   ├── cli.py                         # Argumentos, comandos y modo interactivo
+│   ├── config.py                      # Rutas, tokens especiales y tamaño del modelo
+│   ├── dataset.py                     # CSV y ejemplos de entrenamiento
+│   ├── inference.py                   # Carga, recuperación y respuestas
+│   ├── model.py                       # Atención y bloques Transformer en PyTorch
+│   ├── retrieval.py                   # Búsqueda TF-IDF y similitud coseno
+│   ├── text.py                        # Tokenización, alias y conversión texto/IDs
+│   └── training.py                    # Lotes, entrenamiento y checkpoint
 ├── docs/
 │   ├── DATASET.md                     # Esquema, estadísticas y procedencia
 │   ├── LEARNING_GUIDE.md              # Recorrido técnico paso a paso
 │   └── MODEL_CARD.md                  # Uso previsto y limitaciones
-├── micro_language_model.py              # Entrenamiento, modelo y CLI
+├── micro_language_model.py            # Punto de entrada compatible
 ├── requirements.txt                   # Dependencias fijadas
 └── CONTRIBUTING.md                    # Guía y ejercicios de práctica
 ```
 
+Cada módulo tiene una responsabilidad y sus propios imports. `requirements.txt` sigue siendo el único lugar para instalar dependencias externas; actualmente contiene PyTorch y NumPy. La CLI pública permanece en `micro_language_model.py`, que delega en `micro_lm.cli` para conservar los comandos del inicio rápido.
+
 ## Contenido educativo / Learning path
 
-1. Sigue `read_dataset`, `make_training_sequences` y `train` en `micro_language_model.py`.
-2. Estudia `CosineSelfAttention`, `TransformerBlock` y `MicroGPT`.
-3. Compara `cosine_similarity` (búsqueda en recetas) con Q/K por coseno (atención interna).
+1. Sigue `read_dataset` y `make_training_sequences` en `micro_lm/dataset.py`; estudia `build_idf` y `cosine_similarity` en `micro_lm/retrieval.py`; luego `train` en `micro_lm/training.py`.
+2. Estudia `CosineSelfAttention`, `TransformerBlock` y `MicroGPT` en `micro_lm/model.py`.
+3. Compara `cosine_similarity` en `micro_lm/retrieval.py` con Q/K por coseno en `micro_lm/model.py`.
 4. Usa los ejercicios sugeridos en [CONTRIBUTING.md](CONTRIBUTING.md) para extender el prototipo.
 
 ## Datos y licencia / Data and licensing

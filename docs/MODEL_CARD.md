@@ -19,7 +19,8 @@ Micro Language Model de recetas is a local learning prototype that combines a ti
 
 ## Model details
 
-- Architecture: decoder-only causal Transformer, implemented in `micro_language_model.py` with PyTorch.
+- Architecture: decoder-only causal Transformer, implemented in `micro_lm/model.py` with PyTorch.
+- Code organization: configuration, text handling, dataset processing, training, inference, and CLI live in separate modules under `micro_lm/`.
 - Configuration: 2 blocks, 4 attention heads, 64-dimensional embeddings, 192-token context, and 0.1 dropout.
 - Attention: normalized query/key vectors with cosine scores, causal mask, softmax, and value aggregation.
 - Tokenization: word-level with punctuation and special tokens; unknown input words map to `<unk>`.

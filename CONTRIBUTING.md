@@ -10,14 +10,14 @@ Follow the Python 3.14 commands in [README.md](README.md). Keep dependencies ins
 
 | Topic | Code location |
 | --- | --- |
-| CSV validation | `read_dataset` |
-| Prompt templates and vocabulary terms | `make_training_sequences` |
-| TF-IDF and cosine search | `build_idf`, `vectorize`, `cosine_similarity` |
-| Causal attention | `CosineSelfAttention` |
-| Transformer and next-token model | `TransformerBlock`, `MicroGPT` |
-| Training and checkpoint | `train` |
-| Query handling and output grounding | `MicroLanguageModel.answer` |
-| Command-line flags | `main` |
+| CSV validation and prompt templates | `micro_lm/dataset.py` |
+| Tokenization and ingredient aliases | `micro_lm/text.py` |
+| Model sizes and default paths | `micro_lm/config.py` |
+| TF-IDF and cosine search | `micro_lm/retrieval.py` |
+| Causal attention, Transformer and next-token model | `micro_lm/model.py` |
+| Training and checkpoint | `micro_lm/training.py` |
+| Query handling and output grounding | `micro_lm/inference.py` |
+| Command-line flags | `micro_lm/cli.py` |
 
 ## Suggested portfolio exercises
 
