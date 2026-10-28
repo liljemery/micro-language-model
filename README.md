@@ -51,7 +51,7 @@ Usa el intérprete dentro de `.venv` para que `pip` instale PyTorch en ese entor
 .venv/bin/python micro_language_model.py ask --help
 ```
 
-Las respuestas de recetas están en inglés, porque el dataset está en inglés. El prototipo reconoce algunos nombres de ingredientes, plurales y alias en español. Si pides sopa, indica que el dataset no contiene recetas de sopa; si no encuentra un ingrediente conocido, te pide uno.
+Las respuestas generadas están en inglés, porque el dataset está en inglés. El prototipo reconoce algunos nombres de ingredientes, plurales y alias en español. Cada token de la respuesta se genera desde los pesos del checkpoint y se imprime en cuanto está disponible. La búsqueda coseno puede añadir una receta del CSV como contexto; sin una coincidencia, el modelo intenta responder sin contexto recuperado. Como el vocabulario y los datos son pequeños, esa salida puede ser incoherente o inventar pasos.
 
 ## Arquitectura / Architecture
 
@@ -68,7 +68,7 @@ flowchart TD
     inference --> components
 ```
 
-El lanzador conserva los comandos existentes y delega en la CLI. Al consultar, `inference.py` recupera una receta por coseno y condiciona el Transformer causal; solo acepta el texto generado si coincide con la receta recuperada, y si no devuelve la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver detalles y límites.
+El lanzador conserva los comandos existentes y delega en la CLI. Al consultar, `inference.py` puede recuperar una receta por coseno como contexto y pasa el prompt al Transformer causal. `model.py` genera un token cada vez y la CLI lo imprime inmediatamente; no hay respuestas fijas ni sustitución por la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver detalles y límites.
 
 ## Estructura del repositorio / Repository layout
 
@@ -111,4 +111,4 @@ El dataset proviene del archivo `SLM Dataset.zip` proporcionado para este proyec
 
 ## English summary
 
-Clone the repository, create a Python 3.14 virtual environment, install `requirements.txt`, then run `micro_language_model.py train` before asking questions. The CSV is included; generated weights are intentionally not versioned. This is a domain-limited learning prototype: it combines a tiny causal Transformer with cosine-based recipe retrieval and falls back to the retrieved CSV row when generation changes its wording. See the linked docs for setup, data provenance, architecture, and limitations.
+Clone the repository, create a Python 3.14 virtual environment, install `requirements.txt`, then run `micro_language_model.py train` before asking questions. The CSV is included; generated weights are intentionally not versioned. This is a domain-limited learning prototype: it streams tokens from a tiny causal Transformer and can add cosine-retrieved recipe context. It is not a general-purpose or externally pretrained LLM. See the linked docs for setup, data provenance, architecture, and limitations.

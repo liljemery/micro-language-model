@@ -91,3 +91,12 @@ def decode(token_ids, itos):
         else:
             output.append(token)
     return " ".join(output)
+
+
+def decode_token(token, first=False):
+    """Format one generated token without buffering the rest of the answer."""
+    if token in SPECIAL_TOKENS:
+        return ""
+    if token in {".", ",", ":", ";", "!", "?", ")", "]", "}"}:
+        return token
+    return ("" if first else " ") + token

@@ -101,26 +101,27 @@ class MicroGPT(nn.Module):
         x = self.final_norm(self.blocks(x))
         return self.language_head(x)
 
-    @torch.no_grad()
     def generate(self, prompt_ids, itos, max_new_tokens, temperature):
+        """Produce token IDs one at a time so callers can stream the response."""
         device = next(self.parameters()).device
         indices = torch.tensor([prompt_ids], dtype=torch.long, device=device)
         blocked = {
             SPECIAL_TOKENS.index(token)
             for token in ("<pad>", "<unk>", "<user>", "<context>", "<assistant>")
         }
-        for _ in range(max_new_tokens):
-            context = indices[:, -self.block_size :]
-            logits = self(context)[:, -1, :] / temperature
-            for token_id in blocked:
-                logits[0, token_id] = float("-inf")
-            top_values, top_ids = torch.topk(logits, k=min(12, logits.size(-1)))
-            probabilities = F.softmax(top_values, dim=-1)
-            next_id = top_ids.gather(
-                -1, torch.multinomial(probabilities, num_samples=1)
-            )
-            token_id = next_id.item()
-            if itos[token_id] == "<eos>":
-                break
-            indices = torch.cat((indices, next_id), dim=1)
-        return indices[0, len(prompt_ids) :].tolist()
+        with torch.no_grad():
+            for _ in range(max_new_tokens):
+                context = indices[:, -self.block_size :]
+                logits = self(context)[:, -1, :] / temperature
+                for token_id in blocked:
+                    logits[0, token_id] = float("-inf")
+                top_values, top_ids = torch.topk(logits, k=min(12, logits.size(-1)))
+                probabilities = F.softmax(top_values, dim=-1)
+                next_id = top_ids.gather(
+                    -1, torch.multinomial(probabilities, num_samples=1)
+                )
+                token_id = next_id.item()
+                if itos[token_id] == "<eos>":
+                    break
+                indices = torch.cat((indices, next_id), dim=1)
+                yield token_id

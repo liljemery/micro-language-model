@@ -25,7 +25,7 @@ Micro Language Model de recetas is a local learning prototype that combines a ti
 - Attention: normalized query/key vectors with cosine scores, causal mask, softmax, and value aggregation.
 - Tokenization: word-level with punctuation and special tokens; unknown input words map to `<unk>`.
 - Training: next-token cross-entropy on prompt/recipe sequences generated from the included CSV.
-- Inference: TF-IDF-style cosine retrieval supplies one CSV row as context; the model samples a continuation and the CLI accepts it only if its normalized word sequence matches the source answer. Otherwise it returns the source row exactly.
+- Inference: TF-IDF-style cosine retrieval can supply one CSV row as context; the model samples a continuation from its learned weights and the CLI prints each generated token immediately. There are no fixed answer strings or exact-source fallback.
 - Runtime: CPU by default for a small, predictable local example.
 
 ## Data
@@ -39,8 +39,8 @@ The training data is `data/generated_recipe_dataset.csv`, with 1,000 rows in Eng
 - Retrieval is lexical TF-IDF, so phrasing with unknown synonyms may not find a recipe.
 - Spanish support is a limited ingredient alias table; the answer remains in English.
 - The dataset contains repeated, template-like recipe steps and has not been validated as safe or accurate cooking guidance.
-- Soup is absent from the CSV, and the CLI explicitly declines soup requests.
-- Exact-source fallback improves faithfulness to the CSV but can make generated output rarely visible.
+- Soup is absent from the CSV. With no matching context, the model still generates a continuation, which may be irrelevant or fabricated.
+- Streaming exposes the model's actual sampled output, including errors and repetition; it does not ensure factual or recipe accuracy.
 
 ## Reproducibility
 

@@ -46,11 +46,11 @@ The project uses cosine similarity in two different places:
 
 Retrieval is a TF-IDF-style lexical search, not a learned semantic embedding. The query must mention known ingredients, a recognizable recipe title, or a supported alias. “Natural language” here means flexible wording around those terms, not general language understanding.
 
-## 5. Generate a grounded answer
+## 5. Generate and stream an answer
 
-In `micro_lm/inference.py`, `MicroLanguageModel.answer` normalizes known ingredient aliases, gets a candidate recipe by cosine similarity, and puts that row into the prompt. `MicroGPT.generate` in `micro_lm/model.py` predicts a continuation one token at a time using top-k sampling. The result is compared with the source recipe's word sequence. If any wording differs, the program returns the exact CSV answer instead. This simple guard keeps the demo grounded in the training data, though it also means the runtime often displays retrieved text rather than a novel generation.
+In `micro_lm/inference.py`, `MicroLanguageModel.stream_answer` normalizes known ingredient aliases and may add a candidate recipe from cosine retrieval to the prompt. If no recipe matches, it still sends the user's prompt to the model without retrieved context. `MicroGPT.generate` in `micro_lm/model.py` yields each sampled token as soon as it is produced; the CLI writes and flushes that token immediately. It does not compare the output with a CSV row or replace it with a fixed response.
 
-Soup requests have a specific fallback because the dataset contains no soup recipes. Queries without a matching ingredient or recipe receive a prompt to mention a known term.
+This project trains its own small checkpoint from random initialization; it does not download or use an external pretrained LLM. Ask about a topic such as soup that is absent from the CSV to see that generation still runs without a canned refusal. The response can be nonsensical because the model is tiny, trained only on recipe examples, and word-tokenized.
 
 ## 6. Suggested experiments
 
@@ -69,4 +69,4 @@ Try these small changes one at a time and compare their effects:
 - The data is English and its provenance and culinary quality are unknown.
 - The retriever uses words, not embeddings; synonyms outside the alias table may not match.
 - The model was trained on all rows, so the current training loss is not a held-out quality measure.
-- The fallback prevents many invented recipe details but does not make the source dataset reliable.
+- Generated text can repeat, contradict itself, or invent recipe details; the tiny model has no factuality guarantee.

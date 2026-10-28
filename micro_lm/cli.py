@@ -49,7 +49,7 @@ def main():
         model = MicroLanguageModel.load(args.model)
         query = " ".join(args.query).strip()
         if query:
-            print(model.answer(query, args.max_new_tokens, args.temperature))
+            _print_stream(model, query, args.max_new_tokens, args.temperature)
             return 0
 
         print("Pregunta en lenguaje natural; escribe /salir para terminar.")
@@ -62,10 +62,22 @@ def main():
             if query.lower() in {"/salir", "/exit", "salir", "exit"}:
                 break
             if query:
-                print(
-                    f"MicroLM> {model.answer(query, args.max_new_tokens, args.temperature)}"
-                )
+                sys.stdout.write("MicroLM> ")
+                _write_stream(model, query, args.max_new_tokens, args.temperature)
+                sys.stdout.write("\n")
+                sys.stdout.flush()
         return 0
     except (OSError, csv.Error, KeyError, RuntimeError, ValueError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
+
+
+def _write_stream(model, query, max_new_tokens, temperature):
+    for chunk in model.stream_answer(query, max_new_tokens, temperature):
+        sys.stdout.write(chunk)
+        sys.stdout.flush()
+
+
+def _print_stream(model, query, max_new_tokens, temperature):
+    _write_stream(model, query, max_new_tokens, temperature)
+    sys.stdout.write("\n")

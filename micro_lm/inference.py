@@ -4,7 +4,7 @@ import torch
 
 from .model import MicroGPT, choose_device
 from .retrieval import cosine_similarity, vectorize
-from .text import decode, encode, normalize_ingredient_terms, words
+from .text import decode_token, encode, normalize_ingredient_terms, words
 
 
 class MicroLanguageModel:
@@ -33,14 +33,9 @@ class MicroLanguageModel:
         checkpoint = torch.load(path, map_location="cpu", weights_only=True)
         return cls(checkpoint)
 
-    def answer(self, query, max_new_tokens=100, temperature=0.35):
-        """Busca una receta apropiada y genera una respuesta con ese contexto."""
+    def stream_answer(self, query, max_new_tokens=100, temperature=0.35):
+        """Genera y entrega texto token por token desde los pesos del checkpoint."""
         query_terms = normalize_ingredient_terms(query)
-        if {"soup", "soups", "sopa", "sopas"}.intersection(query_terms):
-            return (
-                "El dataset no contiene recetas de sopa. Dime qué ingredientes "
-                "tienes y te sugiero una receta basada en los datos."
-            )
         query_vector = vectorize(query_terms, self.idf)
         if query_vector:
             scored = [
@@ -59,27 +54,20 @@ class MicroLanguageModel:
             ]
             record = title_matches[0] if title_matches else None
 
-        if record is None:
-            return (
-                "Solo conozco las recetas del dataset. Menciona algún ingrediente "
-                "o nombre de receta, por ejemplo: carrot, peas o milk."
-            )
-
-        context = f"{record['recipe_name']}. {record['output']}"
-        prompt = f"<user> {query.lower()} <context> {context} <assistant> "
+        prompt = f"<user> {query.lower()}"
+        if record is not None:
+            context = f"{record['recipe_name']}. {record['output']}"
+            prompt += f" <context> {context}"
+        prompt += " <assistant>"
         prompt_ids = encode(prompt, self.stoi)[-self.config["block_size"] :]
-        generated = self.model.generate(
+        first = True
+        for token_id in self.model.generate(
             prompt_ids,
             self.itos,
             max_new_tokens=max_new_tokens,
             temperature=temperature,
-        )
-        generated_text = decode(generated, self.itos).strip()
-        if self._matches_retrieved_recipe(generated_text, record):
-            return generated_text
-        return context
-
-    def _matches_retrieved_recipe(self, answer, record):
-        """Acepta generación solo si conserva exactamente el texto fuente."""
-        expected = f"{record['recipe_name']}. {record['output']}"
-        return words(answer) == words(expected)
+        ):
+            chunk = decode_token(self.itos[token_id], first=first)
+            if chunk:
+                yield chunk
+                first = False
