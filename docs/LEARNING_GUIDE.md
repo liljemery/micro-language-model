@@ -1,0 +1,72 @@
+# Learning guide: from CSV to a micro language model
+
+This guide maps the ideas in the project to the implementation in `micro_language_model.py`. It is an educational walkthrough, not a claim that this model has the scale or general knowledge of a commercial LLM.
+
+## 1. Prepare examples and tokens
+
+`read_dataset` checks that the CSV has the `input`, `recipe_name`, and `output` columns and keeps complete rows. `make_training_sequences` builds 12 English question templates for every recipe. A sequence looks like:
+
+```text
+<user> what can i cook with carrot and peas?
+<context> Peas Fry. Step 1: ...
+<assistant> Peas Fry. Step 1: ... <eos>
+```
+
+`tokenize` splits text into word-level tokens and punctuation. The vocabulary is built from the training sequences, with special tokens for roles, padding, unknown words, and end of response. The development training run with this dataset produced a vocabulary of 109 token IDs.
+
+## 2. Learn next-token prediction
+
+`train` turns each sequence into input and target token arrays shifted by one position. For example, the target for `"heat oil"` is the sequence beginning at `"oil"`. The model learns with cross-entropy loss, AdamW, a learning rate of `0.0003`, gradient clipping, a default batch size of 16, and 1,000 steps. The seed is fixed to 42. Padding positions are ignored by the loss.
+
+The training loop saves a checkpoint named `micro_language_model.pt` containing the vocabulary, model configuration, recipe rows, retrieval weights, and learned parameters. It is a generated artifact and is not committed; rerun `python micro_language_model.py train` to create it.
+
+## 3. Understand the Transformer
+
+The small model has a token embedding, learned positional embedding, two `TransformerBlock`s, a final normalization layer, and a language-model output head. Each block applies:
+
+1. Layer normalization, then self-attention, added back to the block input.
+2. Layer normalization, then a two-layer feed-forward network, also added back.
+
+`CosineSelfAttention` projects each token into query (Q), key (K), and value (V) vectors. It L2-normalizes Q and K, then calculates their cosine scores:
+
+```text
+score(q, k) = normalize(q) · normalize(k)
+```
+
+The scores are scaled, future-token positions are set to a very small value using a lower-triangular causal mask, and softmax turns the remaining scores into attention weights. The weights mix the V vectors. This is attention inside the language model.
+
+## 4. Keep retrieval separate from attention
+
+The project uses cosine similarity in two different places:
+
+| Mechanism | What is compared? | Why? |
+| --- | --- | --- |
+| Recipe retrieval (`build_idf`, `vectorize`, `cosine_similarity`) | Query ingredient terms and CSV ingredient lists | Select a recipe row to provide context |
+| Self-attention (`CosineSelfAttention`) | Q and K vectors for tokens in the current sequence | Let each generated token use earlier relevant tokens |
+
+Retrieval is a TF-IDF-style lexical search, not a learned semantic embedding. The query must mention known ingredients, a recognizable recipe title, or a supported alias. “Natural language” here means flexible wording around those terms, not general language understanding.
+
+## 5. Generate a grounded answer
+
+`MicroLanguageModel.answer` normalizes known ingredient aliases, gets a candidate recipe by cosine similarity, and puts that row into the prompt. `MicroGPT.generate` predicts a continuation one token at a time using top-k sampling. The result is compared with the source recipe's word sequence. If any wording differs, the program returns the exact CSV answer instead. This simple guard keeps the demo grounded in the training data, though it also means the runtime often displays retrieved text rather than a novel generation.
+
+Soup requests have a specific fallback because the dataset contains no soup recipes. Queries without a matching ingredient or recipe receive a prompt to mention a known term.
+
+## 6. Suggested experiments
+
+Try these small changes one at a time and compare their effects:
+
+1. Add a query phrase to the template list in `make_training_sequences`; retrain and see whether that phrasing retrieves the expected context.
+2. Add an ingredient alias to `INGREDIENT_ALIASES`; ask with its plural or Spanish equivalent.
+3. Change `n_embd`, `n_head`, `n_layer`, or `block_size` in `CONFIG`; retrain because checkpoint shapes depend on them.
+4. Change the retrieval weighting or print the top candidate scores to inspect why a query selected a row.
+5. Replace word-level tokenization with subword tokenization and compare vocabulary size, unknown terms, training speed, and output quality.
+6. Add a held-out evaluation split and metrics before making claims about quality. The current script trains on all rows and does not calculate evaluation metrics.
+
+## 7. Limits to keep in mind
+
+- The vocabulary and training corpus are tiny and recipe-specific.
+- The data is English and its provenance and culinary quality are unknown.
+- The retriever uses words, not embeddings; synonyms outside the alias table may not match.
+- The model was trained on all rows, so the current training loss is not a held-out quality measure.
+- The fallback prevents many invented recipe details but does not make the source dataset reliable.
