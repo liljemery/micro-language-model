@@ -57,15 +57,15 @@ Las respuestas de recetas están en inglés, porque el dataset está en inglés.
 
 ```mermaid
 flowchart TD
-    A["Entrenar: CSV y preguntas variadas"] --> B["Micro Language Model causal con atención Q/K por coseno"]
-    B --> C["Guardar micro_language_model.pt"]
-    D["Pregunta"] --> E["Normalizar tokens y buscar contexto por coseno"]
-    E --> F{"¿Petición de sopa o sin coincidencia?"}
-    F -- Sí --> G["Explicar que no hay receta de sopa o pedir un ingrediente"]
-    F -- No --> H["Generar respuesta condicionada al contexto"]
-    H --> I{"¿Coincide con los datos recuperados?"}
-    I -- Sí --> J["Devolver texto generado"]
-    I -- No --> K["Devolver la receta exacta del CSV"]
+    A["Entrenar<br/>CSV + preguntas"] --> B["Micro Language Model causal<br/>Atención Q/K por coseno"]
+    B --> C["Guardar checkpoint<br/>micro_language_model.pt"]
+    D["Pregunta"] --> E["Normalizar términos<br/>Buscar receta por coseno"]
+    E --> F{"¿Pide sopa o<br/>no hay coincidencia?"}
+    F -- Sí --> G["Avisar que no hay receta de sopa<br/>o pedir un ingrediente"]
+    F -- No --> H["Generar respuesta<br/>con la receta recuperada"]
+    H --> I{"¿Coincide con<br/>la receta recuperada?"}
+    I -- Sí --> J["Devolver respuesta generada"]
+    I -- No --> K["Devolver receta<br/>exacta del CSV"]
 ```
 
 Micro Language Model usa un Transformer causal autoregresivo, no una llamada a una API. Como la generación puede cambiar detalles, el CLI solo la acepta si su secuencia de palabras coincide con la receta recuperada; en otro caso devuelve la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver los detalles y límites.
