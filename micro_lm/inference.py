@@ -35,25 +35,7 @@ class MicroLanguageModel:
 
     def stream_answer(self, query, max_new_tokens=100, temperature=0.35):
         """Genera y entrega texto token por token desde los pesos del checkpoint."""
-        query_terms = normalize_ingredient_terms(query)
-        query_vector = vectorize(query_terms, self.idf)
-        if query_vector:
-            scored = [
-                (cosine_similarity(query_vector, vector), index)
-                for index, vector in enumerate(self.record_vectors)
-            ]
-            best_score, best_index = max(scored, key=lambda item: item[0])
-            record = self.records[best_index] if best_score > 0 else None
-        else:
-            title_matches = [
-                record
-                for record in self.records
-                if query_terms.intersection(
-                    normalize_ingredient_terms(record["recipe_name"])
-                )
-            ]
-            record = title_matches[0] if title_matches else None
-
+        record, _, _ = self.retrieve(query)
         prompt = f"<user> {query.lower()}"
         if record is not None:
             context = f"{record['recipe_name']}. {record['output']}"
@@ -71,3 +53,26 @@ class MicroLanguageModel:
             if chunk:
                 yield chunk
                 first = False
+
+    def retrieve(self, query):
+        """Devuelve la receta recuperada, su score y el método usado."""
+        query_terms = normalize_ingredient_terms(query)
+        query_vector = vectorize(query_terms, self.idf)
+        if query_vector:
+            scored = [
+                (cosine_similarity(query_vector, vector), index)
+                for index, vector in enumerate(self.record_vectors)
+            ]
+            best_score, best_index = max(scored, key=lambda item: item[0])
+            record = self.records[best_index] if best_score > 0 else None
+            return record, best_score, "cosine"
+        else:
+            title_matches = [
+                record
+                for record in self.records
+                if query_terms.intersection(
+                    normalize_ingredient_terms(record["recipe_name"])
+                )
+            ]
+            record = title_matches[0] if title_matches else None
+            return record, None, "title" if record is not None else "none"

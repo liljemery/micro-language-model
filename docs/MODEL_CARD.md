@@ -24,7 +24,7 @@ Micro Language Model de recetas is a local learning prototype that combines a ti
 - Configuration: 2 blocks, 4 attention heads, 64-dimensional embeddings, 192-token context, and 0.1 dropout.
 - Attention: normalized query/key vectors with cosine scores, causal mask, softmax, and value aggregation.
 - Tokenization: word-level with punctuation and special tokens; unknown input words map to `<unk>`.
-- Training: next-token cross-entropy on prompt/recipe sequences generated from the included CSV.
+- Training: next-token cross-entropy on prompt/recipe sequences generated from the training CSV. `--retrieval-data` can add held-out rows to the retrieval index without using them as next-token targets.
 - Inference: TF-IDF-style cosine retrieval can supply one CSV row as context; the model samples a continuation from its learned weights and the CLI prints each generated token immediately. There are no fixed answer strings or exact-source fallback.
 - Runtime: CPU by default for a small, predictable local example.
 
@@ -35,7 +35,7 @@ The training data is `data/generated_recipe_dataset.csv`, with 1,000 rows in Eng
 ## Known limitations and risks
 
 - The model is extremely small and is trained only on a narrow recipe corpus.
-- It does not have a held-out evaluation set; the training loss is not a measure of generalization.
+- The default training command uses every supplied row and does not create a held-out evaluation set. The `split` and `evaluate` commands provide a workflow for a separate evaluation checkpoint.
 - Retrieval is lexical TF-IDF, so phrasing with unknown synonyms may not find a recipe.
 - Spanish support is a limited ingredient alias table; the answer remains in English.
 - The dataset contains repeated, template-like recipe steps and has not been validated as safe or accurate cooking guidance.

@@ -17,8 +17,8 @@ The input column contains 18 distinct ingredient words: `butter`, `capsicum`, `c
 ## Processing
 
 - Training expands each row into 12 English prompt variants. The CSV itself is not modified.
-- Retrieval builds inverse-document-frequency weights from the `input` column, vectorizes a query, then ranks rows by cosine similarity.
-- The model sees the recipe title and output as context. If its generated word sequence differs from the retrieved answer, the CLI returns the original row's title and output.
+- Retrieval builds inverse-document-frequency weights from the `input` column, vectorizes a query, then ranks rows by cosine similarity. By default, it indexes the same rows used to train. `train --retrieval-data` can add a separate retrieval-only CSV whose rows are not used as next-token training examples.
+- The model may see the retrieved recipe title and output as context, then streams its sampled continuation. There is no exact-source fallback.
 - Queries can use a small hand-written set of English plurals and Spanish ingredient aliases. This mapping is in `INGREDIENT_ALIASES` in `micro_lm/text.py`; it does not translate the recipe text.
 
 ## Quality and appropriate use

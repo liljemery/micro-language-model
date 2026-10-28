@@ -1,0 +1,4 @@
+case_id,query,expected_recipe_name,category
+spinach-paraphrase,"I have spinach and capsicum. What could I make?",Spinach Fry,in_domain_smoke
+butter-vegetables,"Could you suggest a recipe with butter, carrot, onion and peas?",Homestyle Butter Dish,in_domain_smoke
+soup-out-of-domain,"What soup can I make?",,out_of_domain

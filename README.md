@@ -10,6 +10,7 @@
 - Atención propia: normaliza Q y K y calcula sus puntajes con similitud de coseno; una máscara causal impide mirar tokens futuros.
 - Recuperación TF-IDF por coseno sobre los ingredientes del CSV, usada como contexto para responder preguntas.
 - CLI para entrenar, preguntar una vez o conversar en modo interactivo.
+- Comandos `split` y `evaluate` para separar recetas por título, medir Hit@1 y guardar generaciones repetidas para revisión humana.
 - Dataset de entrenamiento incluido: 1.000 filas en `data/generated_recipe_dataset.csv`.
 
 ## Inicio rápido / Quick start
@@ -49,9 +50,18 @@ Usa el intérprete dentro de `.venv` para que `pip` instale PyTorch en ese entor
 # Opciones de entrenamiento y consulta
 .venv/bin/python micro_language_model.py train --help
 .venv/bin/python micro_language_model.py ask --help
+.venv/bin/python micro_language_model.py split --help
+.venv/bin/python micro_language_model.py evaluate --help
+
+# Crear una reserva por título y ejecutar una evaluación de ejemplo
+.venv/bin/python micro_language_model.py split
+.venv/bin/python micro_language_model.py train --data artifacts/train_recipes.csv --retrieval-data artifacts/heldout_recipes.csv
+.venv/bin/python micro_language_model.py evaluate --queries artifacts/heldout_queries.csv --runs 5
 ```
 
 Las respuestas generadas están en inglés, porque el dataset está en inglés. El prototipo reconoce algunos nombres de ingredientes, plurales y alias en español. Cada token de la respuesta se genera desde los pesos del checkpoint y se imprime en cuanto está disponible. La búsqueda coseno puede añadir una receta del CSV como contexto; sin una coincidencia, el modelo intenta responder sin contexto recuperado. Como el vocabulario y los datos son pequeños, esa salida puede ser incoherente o inventar pasos.
+
+El comando `evaluate` mide Hit@1 de la recuperación y guarda cinco generaciones por consulta para calificarlas manualmente; no calcula por sí solo una puntuación de veracidad. La división y las métricas tienen instrucciones en [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ## Arquitectura / Architecture
 
@@ -60,12 +70,15 @@ flowchart TD
     cli["Interfaz<br/>micro_language_model.py<br/>micro_lm/cli.py"]
     training["Entrenamiento<br/>training.py"]
     inference["Consulta<br/>inference.py"]
+    evaluation["Evaluación<br/>evaluation.py"]
     components["Componentes de micro_lm/<br/>dataset.py · retrieval.py<br/>model.py · text.py · config.py"]
 
     cli --> training
     cli --> inference
+    cli --> evaluation
     training --> components
     inference --> components
+    evaluation --> components
 ```
 
 El lanzador conserva los comandos existentes y delega en la CLI. Al consultar, `inference.py` puede recuperar una receta por coseno como contexto y pasa el prompt al Transformer causal. `model.py` genera un token cada vez y la CLI lo imprime inmediatamente; no hay respuestas fijas ni sustitución por la fila original del CSV. Consulta la [guía de aprendizaje](docs/LEARNING_GUIDE.md) y la [tarjeta del modelo](docs/MODEL_CARD.md) para ver detalles y límites.
@@ -75,11 +88,13 @@ El lanzador conserva los comandos existentes y delega en la CLI. Al consultar, `
 ```text
 micro-language-model/
 ├── data/generated_recipe_dataset.csv  # Datos usados para entrenar y recuperar
+├── data/evaluation_queries.example.csv # Casos de ejemplo, no benchmark independiente
 ├── micro_lm/
 │   ├── __init__.py                    # Paquete del modelo
 │   ├── cli.py                         # Argumentos, comandos y modo interactivo
 │   ├── config.py                      # Rutas, tokens especiales y tamaño del modelo
 │   ├── dataset.py                     # CSV y ejemplos de entrenamiento
+│   ├── evaluation.py                  # División por receta y métricas de evaluación
 │   ├── inference.py                   # Carga, recuperación y respuestas
 │   ├── model.py                       # Atención y bloques Transformer en PyTorch
 │   ├── retrieval.py                   # Búsqueda TF-IDF y similitud coseno
@@ -87,6 +102,7 @@ micro-language-model/
 │   └── training.py                    # Lotes, entrenamiento y checkpoint
 ├── docs/
 │   ├── DATASET.md                     # Esquema, estadísticas y procedencia
+│   ├── EVALUATION.md                  # Reserva, benchmark y revisión de resultados
 │   ├── LEARNING_GUIDE.md              # Recorrido técnico paso a paso
 │   └── MODEL_CARD.md                  # Uso previsto y limitaciones
 ├── micro_language_model.py            # Punto de entrada compatible

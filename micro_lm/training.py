@@ -12,10 +12,38 @@ from .retrieval import build_idf
 from .text import encode, tokenize
 
 
-def train(data_path, model_path, steps, batch_size):
-    """Entrena el modelo desde el CSV y guarda vocabulario, datos y pesos."""
-    records = read_dataset(data_path)
-    sequences, ingredient_terms, recipe_terms = make_training_sequences(records)
+def train(data_path, model_path, steps, batch_size, retrieval_data_path=None):
+    """Entrena con un CSV y, opcionalmente, indexa otro CSV solo para recuperar."""
+    source_paths = [Path(data_path)]
+    if retrieval_data_path is not None:
+        source_paths.append(Path(retrieval_data_path))
+    if Path(model_path).resolve() in {path.resolve() for path in source_paths}:
+        raise ValueError("--model debe ser distinto de los CSV de entrada.")
+    if retrieval_data_path is not None and Path(data_path).resolve() == Path(
+        retrieval_data_path
+    ).resolve():
+        raise ValueError("--retrieval-data debe ser distinto de --data.")
+    training_records = read_dataset(data_path)
+    retrieval_records = list(training_records)
+    if retrieval_data_path is not None:
+        heldout_records = read_dataset(retrieval_data_path)
+        training_titles = {
+            " ".join(record["recipe_name"].casefold().split())
+            for record in training_records
+        }
+        heldout_titles = {
+            " ".join(record["recipe_name"].casefold().split())
+            for record in heldout_records
+        }
+        if training_titles.intersection(heldout_titles):
+            raise ValueError(
+                "--data y --retrieval-data comparten títulos de receta; "
+                "sepáralos por recipe_name."
+            )
+        retrieval_records.extend(heldout_records)
+    sequences, ingredient_terms, recipe_terms = make_training_sequences(
+        training_records
+    )
     vocabulary = sorted(
         {token for sequence in sequences for token in tokenize(sequence)}
         - set(SPECIAL_TOKENS)
@@ -63,8 +91,8 @@ def train(data_path, model_path, steps, batch_size):
         {
             "format_version": 2,
             "vocabulary": itos,
-            "records": records,
-            "idf": build_idf(records),
+            "records": retrieval_records,
+            "idf": build_idf(retrieval_records),
             "ingredient_terms": ingredient_terms,
             "recipe_terms": recipe_terms,
             "config": CONFIG,
@@ -73,4 +101,4 @@ def train(data_path, model_path, steps, batch_size):
         },
         model_path,
     )
-    return len(records), len(itos), device.type
+    return len(training_records), len(itos), device.type

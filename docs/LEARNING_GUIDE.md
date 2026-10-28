@@ -18,7 +18,7 @@ In `micro_lm/text.py`, `tokenize` splits text into word-level tokens and punctua
 
 In `micro_lm/training.py`, `train` turns each sequence into input and target token arrays shifted by one position. For example, the target for `"heat oil"` is the sequence beginning at `"oil"`. The model learns with cross-entropy loss, AdamW, a learning rate of `0.0003`, gradient clipping, a default batch size of 16, and 1,000 steps. The seed is fixed to 42. Padding positions are ignored by the loss.
 
-The training loop saves a checkpoint named `micro_language_model.pt` containing the vocabulary, model configuration, recipe rows, retrieval weights, and learned parameters. It is a generated artifact and is not committed; rerun `python micro_language_model.py train` to create it. Shared paths and model sizes live in `micro_lm/config.py`.
+The training loop saves a checkpoint named `micro_language_model.pt` containing the vocabulary, model configuration, retrieval rows, retrieval weights, and learned parameters. It is a generated artifact and is not committed; rerun `python micro_language_model.py train` to create it. With `--retrieval-data`, the extra CSV rows go into the retrieval index but are excluded from next-token training. Shared paths and model sizes live in `micro_lm/config.py`.
 
 ## 3. Understand the Transformer
 
@@ -61,12 +61,12 @@ Try these small changes one at a time and compare their effects:
 3. Change `n_embd`, `n_head`, `n_layer`, or `block_size` in `CONFIG` in `micro_lm/config.py`; retrain because checkpoint shapes depend on them.
 4. Change the retrieval weighting in `micro_lm/retrieval.py` or print the top candidate scores to inspect why a query selected a row.
 5. Replace word-level tokenization with subword tokenization and compare vocabulary size, unknown terms, training speed, and output quality.
-6. Add a held-out evaluation split and metrics before making claims about quality. The current script trains on all rows and does not calculate evaluation metrics.
+6. Use `python micro_language_model.py split` to create a recipe-title holdout, train with `--retrieval-data`, and evaluate repeated generations with `python micro_language_model.py evaluate`. Read [EVALUATION.md](EVALUATION.md) before interpreting the scores.
 
 ## 7. Limits to keep in mind
 
 - The vocabulary and training corpus are tiny and recipe-specific.
 - The data is English and its provenance and culinary quality are unknown.
 - The retriever uses words, not embeddings; synonyms outside the alias table may not match.
-- The model was trained on all rows, so the current training loss is not a held-out quality measure.
+- The default training command uses all rows, so its loss is not a held-out quality measure. Use the split workflow for an evaluation checkpoint.
 - Generated text can repeat, contradict itself, or invent recipe details; the tiny model has no factuality guarantee.
